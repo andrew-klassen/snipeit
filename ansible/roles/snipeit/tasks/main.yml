@@ -4,11 +4,46 @@
     name: "{{ packages }}"
   vars:
     packages:
-    - git 
-    - g++ 
-    - imagemagick 
-    - xclip 
-    - libsdl1.2-dev 
-    - libglu1-mesa-dev 
-    - libgl1-mesa-dev
+    - apache2
+    - php
+    - php-pdo 
+    - php-mbstring 
+    - php-tokenizer 
+    - php-curl 
+    - php-mysql 
+    - php-ldap 
+    - php-zip 
+    - php-fileinfo 
+    - php-gd 
+    - php-dom 
+    - php-mcrypt
+    - python
+    - python-mysql
+    - git
 
+- name: install mysql
+  apt:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - mariadb-server
+
+- name: create snipeit database
+  mysql_db:
+    name: snipeit
+    state: present
+
+- mysql_user:
+    name: "snipeit_user"
+    password: "{{ snipeit_password }}"
+    host: '%'
+    priv: 'snipeit.*:ALL'
+    state: present
+  ignore_errors: yes
+
+- name: 
+  shell: |
+     #!/bin/bash
+    
+     curl -sS https://getcomposer.org/installer | php
+     mv composer.phar /usr/local/bin/composer
