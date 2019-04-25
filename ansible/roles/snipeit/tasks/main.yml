@@ -53,16 +53,14 @@
     force: yes
 
 - name: set permissions
-  file: 
-    dest: "/var/www/html/{{ item.dest }}"
-    owner: www-data 
+  file:
+    dest: "/var/www/html"
+    owner: www-data
     group: www-data
-    mode: 755 
+    mode: 0755
     recurse: yes
-  with_items:
-  - storage
-  - public/uploads
-  - bootstrap/cache
+    follow: no
+
 
 - name: run composer
   shell: | 
