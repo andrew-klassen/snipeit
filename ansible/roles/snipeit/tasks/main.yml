@@ -4,29 +4,29 @@
     name: "{{ packages }}"
   vars:
     packages:
-    - apache2
-    - php
-    - php-pdo 
-    - php-mbstring 
-    - php-tokenizer 
-    - php-curl 
-    - php-mysql 
-    - php-ldap 
-    - php-zip 
-    - php-fileinfo 
-    - php-gd 
-    - php-dom 
-    - php-mcrypt
     - python
-    - python-mysql
+    - python-mysqldb
     - git
+    - composer
+    - unzip
+    - php7.2-mbstring
+    - php7.2-xml
+    - php7.2-dev
+    - libmcrypt-dev
+    - php7.2-gd
+    - php7.2-zip
+    - php7.2-curl
+    - php7.2-bcmath
+    - php7.2-mysql
+    - apache2
+    - libapache2-mod-php7.2
 
 - name: install mysql
   apt:
     name: "{{ packages }}"
   vars:
     packages:
-    - mariadb-server
+    - mysql-server
 
 - name: create snipeit database
   mysql_db:
@@ -36,14 +36,81 @@
 - mysql_user:
     name: "snipeit_user"
     password: "{{ snipeit_password }}"
-    host: '%'
+    host: '127.0.0.1'
     priv: 'snipeit.*:ALL'
     state: present
   ignore_errors: yes
 
-- name: 
+- file:
+    path: /var/www/html/index.html
+    state: absent
+
+- name: clone snipeit
+  git:
+    repo: https://github.com/snipe/snipe-it
+    dest: /var/www/html
+    version: master
+    force: yes
+
+- name: set permissions
+  file: 
+    dest: "/var/www/html/{{ item.dest }}"
+    owner: www-data 
+    group: www-data
+    mode: 755 
+    recurse: yes
+  with_items:
+  - storage
+  - public/uploads
+  - bootstrap/cache
+
+- name: run composer
+  shell: | 
+      #!/bin/bash
+      
+      cd /var/www/html
+      composer install --no-dev --prefer-source
+
+
+- name: add the .env config
+  template:
+    src: source/.env
+    dest: /var/www/html/.env
+
+
+- name: run artisan
   shell: |
-     #!/bin/bash
-    
-     curl -sS https://getcomposer.org/installer | php
-     mv composer.phar /usr/local/bin/composer
+      #!/bin/bash
+
+      cd /var/www/html
+      php artisan migrate --force
+
+- name: generate artisan keys
+  shell: |
+      #!/bin/bash
+      
+      cd /var/www/html
+      php artisan key:generate --force
+
+- name: add apache's vhost
+  template:
+    src: source/000-default.conf
+    dest: /etc/apache2/sites-available/000-default.conf
+
+- name: add apache config to allow overwrites
+  template:
+    src: source/apache2.conf
+    dest: /etc/apache2/apache2.conf
+
+- name: enable default site
+  command: a2ensite 000-default.conf
+
+- name: enable mod_rewrite
+  command: a2enmod rewrite
+
+- name: restart and enable
+  service:
+    name: apache2
+    state: restarted
+
+
