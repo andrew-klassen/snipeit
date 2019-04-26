@@ -1,0 +1,28 @@
+
+- name: install mysql
+  apt:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - mysql-server
+    - python-mysqldb
+
+- name: create snipeit database
+  mysql_db:
+    name: snipeit
+    state: present
+
+- mysql_user:
+    name: "snipeit_user"
+    password: "{{ snipeit_password }}"
+    host: '%'
+    priv: 'snipeit.*:ALL'
+    state: present
+  ignore_errors: no
+
+- name: restart and enable mysql
+  service:
+    name: mysql
+    state: restarted
+    enabled: yes
+
