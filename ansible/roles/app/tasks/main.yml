@@ -27,13 +27,12 @@
     path: /var/www/html/index.html
     state: absent
 
-- name: clone snipeit
+- name: clone snipeit repo
   git:
     repo: https://github.com/snipe/snipe-it
     dest: /var/www/html
     version: master
     force: yes
-
 
 - name: set permissions for /var/www/html
   file:
@@ -82,7 +81,6 @@
     path: /etc/apache2/sites-available/000-default.conf
     regexp: 'DocumentRoot'
     line: '        DocumentRoot /var/www/html/public'
-    #    backrefs: yes
   register: vhost
 
 - name: add apache config to allow overwrites
@@ -101,11 +99,10 @@
   changed_when: "'Module rewrite already enabled' not in mod_rewrite_enable.stdout"
   register: mod_rewrite_enable
 
-- name: restart and enable
+- name: restart and enable apache
   service:
     name: apache2
     state: restarted
     enabled: yes
   when: vhost is changed or apache_config is changed or site_enable is changed or mod_rewrite_enable is changed
-
 
