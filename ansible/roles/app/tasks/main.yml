@@ -80,9 +80,9 @@
 - name: change vhost's document root to /var/www/html/public
   lineinfile:
     path: /etc/apache2/sites-available/000-default.conf
-    regexp: '^DocumentRoot'
-    line: 'DocumentRoot /var/www/html/public'
-    backrefs: yes
+    regexp: 'DocumentRoot'
+    line: '        DocumentRoot /var/www/html/public'
+    #    backrefs: yes
   register: vhost
 
 - name: add apache config to allow overwrites
@@ -93,12 +93,12 @@
 
 - name: enable default site
   command: a2ensite 000-default.conf
-  changed_when: "'Site 000-default already enabled' in command_result.stdout"
+  changed_when: "'Site 000-default already enabled' not in site_enable.stdout"
   register: site_enable
 
 - name: enable mod_rewrite
   command: a2enmod rewrite
-  changed_when: "'Module rewrite already enabled' in command_result.stdout"
+  changed_when: "'Module rewrite already enabled' not in mod_rewrite_enable.stdout"
   register: mod_rewrite_enable
 
 - name: restart and enable
