@@ -1,5 +1,9 @@
-[all]
-127.0.0.1
+[all:children]
+app
+database
 
-[server]
-127.0.0.1
+[app]
+snipeit-app
+
+[database]
+snipeit-db

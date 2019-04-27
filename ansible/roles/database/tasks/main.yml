@@ -12,17 +12,26 @@
     name: snipeit
     state: present
 
-- mysql_user:
+- name: create snipeit_user
+  mysql_user:
     name: "snipeit_user"
     password: "{{ snipeit_password }}"
     host: '%'
     priv: 'snipeit.*:ALL'
     state: present
-  ignore_errors: no
+
+- name: unbind mysql from localhost
+  lineinfile:
+    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+    regexp: '^bind-address'
+    line: '#bind-address = 127.0.0.1'
+    backrefs: yes
+  register: mysql_config
 
 - name: restart and enable mysql
   service:
     name: mysql
     state: restarted
     enabled: yes
+  when: mysql_config is changed
 

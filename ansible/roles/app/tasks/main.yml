@@ -22,7 +22,8 @@
     - apache2
     - libapache2-mod-php7.2
 
-- file:
+- name: remove default index.html
+  file:
     path: /var/www/html/index.html
     state: absent
 
@@ -33,7 +34,8 @@
     version: master
     force: yes
 
-- name: set permissions
+
+- name: set permissions for /var/www/html
   file:
     dest: "/var/www/html"
     owner: www-data
@@ -42,6 +44,13 @@
     recurse: yes
     follow: no
 
+- name: add the .env config
+  template:
+    src: source/.env
+    dest: /var/www/html/.env
+    owner: www-data
+    group: www-data
+    mode: 0700
 
 - name: run composer
   shell: | 
@@ -49,13 +58,8 @@
       
       cd /var/www/html
       composer install --no-dev --prefer-source
-
-
-- name: add the .env config
-  template:
-    src: source/.env
-    dest: /var/www/html/.env
-
+  register: command_result
+  changed_when: "'Nothing to install or update' not in command_result.stderr"
 
 - name: run artisan
   shell: |
@@ -63,6 +67,8 @@
 
       cd /var/www/html
       php artisan migrate --force
+  register: command_result
+  changed_when: "'Nothing to migrate.' not in command_result.stdout"
 
 - name: generate artisan keys
   shell: |
@@ -71,26 +77,35 @@
       cd /var/www/html
       php artisan key:generate --force
 
-- name: add apache's vhost
-  template:
-    src: source/000-default.conf
-    dest: /etc/apache2/sites-available/000-default.conf
+- name: change vhost's document root to /var/www/html/public
+  lineinfile:
+    path: /etc/apache2/sites-available/000-default.conf
+    regexp: '^DocumentRoot'
+    line: 'DocumentRoot /var/www/html/public'
+    backrefs: yes
+  register: vhost
 
 - name: add apache config to allow overwrites
   template:
     src: source/apache2.conf
     dest: /etc/apache2/apache2.conf
+  register: apache_config
 
 - name: enable default site
   command: a2ensite 000-default.conf
+  changed_when: "'Site 000-default already enabled' in command_result.stdout"
+  register: site_enable
 
 - name: enable mod_rewrite
   command: a2enmod rewrite
+  changed_when: "'Module rewrite already enabled' in command_result.stdout"
+  register: mod_rewrite_enable
 
 - name: restart and enable
   service:
     name: apache2
     state: restarted
     enabled: yes
+  when: vhost is changed or apache_config is changed or site_enable is changed or mod_rewrite_enable is changed
 
 
